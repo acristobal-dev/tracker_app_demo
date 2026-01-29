@@ -1,1 +1,170 @@
-include: package:flutter_lints/flutter.yaml
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
+
+# The following line activates a set of recommended lints for Flutter apps,
+# packages, and plugins designed to encourage good coding practices.
+
+analyzer:
+  # Exclude generated files and build directories
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated_plugin_registrant.dart"
+    - "build/**"
+  
+  # Enable stricter type checking
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+  # Show more detailed errors
+  errors:
+    # Treat missing return types as errors
+    always_declare_return_types: error
+    # Treat unused imports as errors
+    unused_import: warning
+    # Treat unused local variables as errors
+    unused_local_variable: warning
+    # Treat missing required parameters as errors
+    missing_required_param: error
+    # Treat invalid assignments as errors
+    invalid_assignment: warning
+    # Treat dead code as warnings
+    dead_code: warning
+    # Treat todo comments as warnings
+    todo: warning
+    # Treat type inference failures as warnings (show as yellow alerts)
+    inference_failure_on_function_return_type: warning
+    inference_failure_on_instance_creation: warning
+    inference_failure_on_function_invocation: warning
+
+linter:
+  rules:
+    # === STYLE RULES ===
+    # Prefer single quotes for strings
+    prefer_single_quotes: true
+    # Always declare return types
+    always_declare_return_types: true
+    # Always put required named parameters first
+    always_put_required_named_parameters_first: true
+    # Always specify types for public APIs and variables
+    always_specify_types: true # Enforce explicit typing everywhere
+    # Avoid print statements (use proper logging)
+    avoid_print: true
+    # Avoid relative imports
+    avoid_relative_lib_imports: true
+    # Avoid unnecessary containers
+    avoid_unnecessary_containers: true
+    # Avoid web libraries in Flutter
+    avoid_web_libraries_in_flutter: true
+    
+    # === DESIGN RULES ===
+    # Prefer const constructors
+    prefer_const_constructors: true
+    # Prefer const constructors in immutables
+    prefer_const_constructors_in_immutables: true
+    # Prefer const declarations
+    prefer_const_declarations: true
+    # Prefer const literals
+    prefer_const_literals_to_create_immutables: true
+    # Prefer final fields
+    prefer_final_fields: true
+    # Prefer final locals
+    prefer_final_locals: true
+    # Prefer final in for-each
+    prefer_final_in_for_each: true
+    
+    # === ERROR PREVENTION ===
+    # Avoid slow async
+    avoid_slow_async_io: true
+    # Avoid type to string
+    avoid_type_to_string: true
+    # Cancel subscriptions
+    cancel_subscriptions: true
+    # Close sinks
+    close_sinks: true
+    
+    # === DOCUMENTATION ===
+    # Public member API docs
+    public_member_api_docs: false # Set to true for libraries
+    # Package API docs
+    package_api_docs: false # Set to true for packages
+    
+    # === FORMATTING ===
+    # Curly braces in flow control structures
+    curly_braces_in_flow_control_structures: true
+    # Directives ordering
+    directives_ordering: true
+    # File names
+    file_names: true
+    # Lines longer than 80 chars
+    lines_longer_than_80_chars: true
+    # Trailing commas
+    require_trailing_commas: true
+    
+    # === PERFORMANCE ===
+    # Avoid function literals in foreach calls
+    avoid_function_literals_in_foreach_calls: true
+    # Use key in widget constructors
+    use_key_in_widget_constructors: true
+    # Prefer collection literals
+    prefer_collection_literals: true
+    # Prefer for elements to map fromIterable
+    prefer_for_elements_to_map_fromIterable: true
+    # Prefer if elements to conditional expressions
+    prefer_if_elements_to_conditional_expressions: true
+    # Prefer spread collections
+    prefer_spread_collections: true
+    
+    # === TYPE SAFETY RULES ===
+    # Avoid dynamic calls
+    avoid_dynamic_calls: true
+    # Specify types for function parameters
+    type_annotate_public_apis: true
+    # Omit type annotations for function expression parameters
+    omit_local_variable_types: false
+    # Avoid annotating with dynamic when not required
+    annotate_overrides: true
+    
+    # === ADDITIONAL HELPFUL RULES ===
+    # Avoid redundant argument values
+    avoid_redundant_argument_values: true
+    # Conditional URI does not exist
+    conditional_uri_does_not_exist: true
+    # Deprecated member use from same package
+    deprecated_member_use_from_same_package: true
+    # No duplicate case values
+    no_duplicate_case_values: true
+    # No logic in create state
+    no_logic_in_create_state: true
+    # Prefer interpolation to compose strings
+    prefer_interpolation_to_compose_strings: true
+    # Sized box for whitespace
+    sized_box_for_whitespace: true
+    # Sort child properties last
+    sort_child_properties_last: true
+    # Use build context synchronously
+    use_build_context_synchronously: true
+    # Use colored box
+    use_colored_box: true
+    # Use decorated box
+    use_decorated_box: true
+    # Avoid inferring anything
+    avoid_types_on_closure_parameters: false
+    # Prefer generic function type aliases
+    prefer_generic_function_type_aliases: true
+
+    unawaited_futures: true
+    discarded_futures: true
+
+formatter:
+  # Preserve trailing commas when they improve readability
+  trailing_commas: preserve
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+  <path 
+    fill="#FF5093" 
+    stroke="#FF5093" 
+    stroke-width="2" 
+    stroke-linecap="round" 
+    stroke-linejoin="round" 
+    d="M26,12c0,8-11,17-11,17S4,20,4,12C4,5.9,8.9,1,15,1S26,5.9,26,12z"/>
+  <circle 
+    fill="#000000" 
+    stroke="#000000" 
+    stroke-width="2" 
+    cx="15" cy="12" r="7"/>
+  <circle 
+    fill="#E3FAFF" 
+    stroke="#E3FAFF" 
+    stroke-width="2" 
+    cx="15" cy="12" r="3"/>
+</svg>

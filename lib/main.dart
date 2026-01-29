@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tracker_app_demo/app.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+import 'config/constants/environment.dart';
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Environment.initEnvironment();
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
-    );
-  }
+  runApp(const ProviderScope(child: App()));
 }
