@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomAlertDialog {
   static Future<void> showCustomDialog(
@@ -22,9 +23,17 @@ class CustomAlertDialog {
               const Text('Ingresa un usuario para conectar'),
               TextField(
                 controller: _textController,
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+                  UpperCaseTextFormatter(),
+                  LengthLimitingTextInputFormatter(20),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Nombre de usuario',
                   hintText: 'Ingresa tu nombre de usuario',
+                  helperText: 'Solo letras y números, sin espacios',
                 ),
                 autofocus: true,
               ),
@@ -49,6 +58,19 @@ class CustomAlertDialog {
           ],
         );
       },
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }
