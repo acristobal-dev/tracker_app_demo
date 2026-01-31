@@ -6,6 +6,7 @@ class UserMapper {
     return User(
       id: json['id'] as int,
       userName: json['username'] as String,
+      isOnline: json['is_online'] as bool? ?? false,
       locations: (json['locations'] as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .map(

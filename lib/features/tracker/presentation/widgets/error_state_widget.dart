@@ -4,11 +4,13 @@ class ErrorStateWidget extends StatelessWidget {
   const ErrorStateWidget({
     required this.error,
     required this.onRetry,
+    required this.onDismiss,
     Key? key,
   }) : super(key: key);
 
-  final Object error;
+  final String error;
   final VoidCallback onRetry;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -34,9 +36,9 @@ class ErrorStateWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              error.toString(),
+              error,
               style: const TextStyle(
-                color: Colors.grey,
+                color: Colors.white,
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
@@ -54,6 +56,25 @@ class ErrorStateWidget extends StatelessWidget {
               ),
               child: const Text(
                 'Reintentar',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: onDismiss,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+              child: const Text(
+                'Cerrar',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

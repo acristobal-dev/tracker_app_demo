@@ -14,9 +14,9 @@ class LoadingStateWidget extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Text(
-            'Cargando ubicaciones...',
+            'Cargando ...',
             style: TextStyle(
-              color: Colors.grey,
+              color: Colors.white,
               fontSize: 16,
             ),
           ),

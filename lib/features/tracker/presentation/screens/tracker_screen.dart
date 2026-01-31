@@ -1,49 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tracker_app_demo/features/users/domain/entities/user.dart';
 
-import '../../../users/presentation/providers/providers.dart';
 import '../../tracker.dart';
 
-class TrackerScreen extends ConsumerStatefulWidget {
+class TrackerScreen extends StatelessWidget {
   const TrackerScreen({super.key});
 
   @override
-  ConsumerState<TrackerScreen> createState() => _TrackerScreenState();
-}
-
-class _TrackerScreenState extends ConsumerState<TrackerScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(userProvider.notifier).loadUsers();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<User>> userAsyncValue = ref.watch(userProvider);
-
     return Scaffold(
-      body: userAsyncValue.when(
-        data: (List<User> users) {
-          if (users.isEmpty) {
-            return const EmptyStateWidget();
-          }
+      body: const MapViewWidget(),
+      floatingActionButton: Consumer(
+        builder: (BuildContext context, WidgetRef ref, Widget? child) {
+          final TrackerState trackerState = ref.watch(trackerProvider);
 
-          return MapViewWidget(users: users);
-        },
-        error: (Object error, StackTrace stackTrace) {
-          return ErrorStateWidget(
-            error: error,
-            onRetry: () async {
-              await ref.read(userProvider.notifier).loadUsers();
+          return FloatingActionButton(
+            onPressed: () async {
+              if (!trackerState.isLoading) {
+                await CustomAlertDialog.showCustomDialog(
+                  context,
+                  isConnected: trackerState.isConnected,
+                  previousUserName: trackerState.ownUser.userName,
+                  onConfirm: (String userName) async {
+                    trackerState.isConnected
+                        ? await ref.read(trackerProvider.notifier).disconnect()
+                        : await ref
+                              .read(trackerProvider.notifier)
+                              .connectAndRegister(userName);
+                  },
+                );
+              }
             },
+            child: Icon(
+              trackerState.isLoading
+                  ? Icons.replay_outlined
+                  : trackerState.isConnected
+                  ? Icons.stop
+                  : Icons.play_arrow,
+            ),
           );
         },
-        loading: () => const LoadingStateWidget(),
       ),
     );
   }
