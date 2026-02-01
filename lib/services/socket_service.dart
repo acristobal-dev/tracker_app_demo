@@ -34,7 +34,10 @@ class SocketService {
         IO.OptionBuilder()
             .setTransports(<String>['websocket'])
             .enableAutoConnect()
-            .setTimeout(10000)
+            .setTimeout(30000)
+            .setReconnectionDelay(3000)
+            .setReconnectionDelayMax(10000)
+            .setReconnectionAttempts(10)
             .build(),
       );
 

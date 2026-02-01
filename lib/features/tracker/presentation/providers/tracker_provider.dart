@@ -123,7 +123,7 @@ class TrackerNotifier extends Notifier<TrackerState> {
       );
 
       for (final User user in response) {
-        if (user.id != state.ownUser.id) {
+        if (user.id != state.ownUser.id && user.locations.isNotEmpty) {
           ref.read(trackerServiceProvider.notifier).emitUserUpdate(user);
         }
       }

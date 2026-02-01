@@ -239,12 +239,10 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
 
   @override
   Future<void> dispose() async {
-    if (context.mounted) {
-      await _userUpdatesSubscription?.cancel();
-      _mapController?.dispose();
-      _markersNotifier.dispose();
-      _iconCache.clear();
-    }
+    await _userUpdatesSubscription?.cancel();
+    _mapController?.dispose();
+    _markersNotifier.dispose();
+    _iconCache.clear();
     super.dispose();
   }
 }
