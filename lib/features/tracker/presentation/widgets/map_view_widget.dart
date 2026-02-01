@@ -89,28 +89,6 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
     });
   }
 
-  //Future<void> _prepareMapData() async {
-  //  final List<User> users = ref
-  //      .read(trackerProvider)
-  //      .otherUsers
-  //      .values
-  //      .toList();
-  //
-  //  if (users.isEmpty || users.first.id == 0) return;
-  //
-  //  _markers.clear();
-  //
-  //  for (int i = 0; i < users.length; i++) {
-  //    final User user = users[i];
-  //
-  //    if (user.locations.isNotEmpty) {
-  //      _markers[user.id] = await _createMarker(user);
-  //    }
-  //  }
-  //
-  //  _markersNotifier.value = _markers.values.toSet();
-  //}
-
   Future<Marker> _createMarker(User user) async {
     final Location lastLocation = user.locations.first;
     final bool isCurrentUser = ref.read(trackerProvider).ownUser.id == user.id;
@@ -202,6 +180,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
                       compassEnabled: false,
                       mapToolbarEnabled: false,
                       zoomControlsEnabled: false,
+                      myLocationButtonEnabled: false,
                       markers: value,
                       onMapCreated: (GoogleMapController controller) {
                         _mapController = controller;

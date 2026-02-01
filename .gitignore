@@ -46,3 +46,7 @@ app.*.map.json
 .env
 pubspec.lock
 android/app/google-services.json
+
+# FVM Version Cache
+.fvm/
+ios/Runner/GoogleService-Info.plist

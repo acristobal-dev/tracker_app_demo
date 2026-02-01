@@ -9,6 +9,7 @@ class TrackerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: const MapViewWidget(),
       floatingActionButton: Consumer(
         builder: (BuildContext context, WidgetRef ref, Widget? child) {

@@ -26,7 +26,7 @@ class CustomAlertDialog {
                 keyboardType: TextInputType.text,
                 textCapitalization: TextCapitalization.characters,
                 inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
                   UpperCaseTextFormatter(),
                   LengthLimitingTextInputFormatter(20),
                 ],
