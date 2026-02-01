@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,16 +31,18 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
   final Map<String, BitmapDescriptor> _iconCache = <String, BitmapDescriptor>{};
 
   late final Future<String> _mapStyleFuture;
+  late final Future<String> _pinSvgFuture;
+  String? _pinSvgString;
 
   static const List<Color> _userColors = <Color>[
-    Color(0xFF6C3DB7), // Verde Uber
-    Color(0xFF1F992A), // Azul
-    Color(0xFFB7257F), // Naranja
-    Color(0xFFFF5093), // Rosa
-    Color(0xFFF2BB41), // Morado
-    Color(0xFF5189E5), // Cyan
-    Color(0xFFEDD977), // Amarillo
-    Color(0xFF8C43FF), // Verde
+    Color(0xFF6C3DB7),
+    Color(0xFF1F992A),
+    Color(0xFFB7257F),
+    Color(0xFFFF5093),
+    Color(0xFFF2BB41),
+    Color(0xFF5189E5),
+    Color(0xFFEDD977),
+    Color(0xFF8C43FF),
   ];
 
   @override
@@ -48,8 +51,12 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
     _mapStyleFuture = rootBundle.loadString(
       'assets/map_styles/dark_style.json',
     );
+    _pinSvgFuture = rootBundle.loadString(
+      'assets/images/pin.svg',
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _pinSvgString = await _pinSvgFuture;
       _suscribeUsersUpdates();
       _listenToDisconnect();
     });
@@ -128,12 +135,17 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
 
     if (!_iconCache.containsKey(key)) {
       try {
+        final Duration waitTime = Platform.isIOS
+            ? const Duration(milliseconds: 500)
+            : const Duration(milliseconds: 100);
+
         _iconCache[key] =
             await PinWidget(
               color: color,
+              svgString: _pinSvgString!,
               size: 30,
             ).toBitmapDescriptor(
-              waitToRender: const Duration(milliseconds: 100),
+              waitToRender: waitTime,
             );
       } catch (e) {
         _iconCache[key] = BitmapDescriptor.defaultMarkerWithHue(
