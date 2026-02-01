@@ -124,10 +124,19 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
     final String key = '${userId}_${isOnline}';
 
     if (!_iconCache.containsKey(key)) {
-      _iconCache[key] = await PinWidget(
-        color: color,
-        size: 30,
-      ).toBitmapDescriptor();
+      try {
+        _iconCache[key] =
+            await PinWidget(
+              color: color,
+              size: 30,
+            ).toBitmapDescriptor(
+              waitToRender: const Duration(milliseconds: 100),
+            );
+      } catch (e) {
+        _iconCache[key] = BitmapDescriptor.defaultMarkerWithHue(
+          isOnline ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
+        );
+      }
     }
     return _iconCache[key]!;
   }
@@ -231,9 +240,10 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
   @override
   Future<void> dispose() async {
     if (context.mounted) {
-      await ref.read(trackerProvider.notifier).disconnect();
       await _userUpdatesSubscription?.cancel();
       _mapController?.dispose();
+      _markersNotifier.dispose();
+      _iconCache.clear();
     }
     super.dispose();
   }

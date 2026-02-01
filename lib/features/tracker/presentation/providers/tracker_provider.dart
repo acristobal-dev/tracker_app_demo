@@ -1,31 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:tracker_app_demo/features/users/domain/domain.dart';
 import 'package:tracker_app_demo/features/users/domain/use_cases/user_use_case.dart';
 import 'package:tracker_app_demo/features/users/presentation/providers/users_repository_provider.dart';
-import 'package:tracker_app_demo/services/location_service.dart';
-import 'package:tracker_app_demo/services/socket_service.dart';
+
+import '../../../../services/services.dart';
 
 final NotifierProvider<TrackerNotifier, TrackerState> trackerProvider =
     NotifierProvider<TrackerNotifier, TrackerState>(TrackerNotifier.new);
 
 class TrackerNotifier extends Notifier<TrackerState> {
-  final LocationService _locationService = LocationService();
-  SocketService? _socketService;
-  StreamSubscription<Position>? _locationSubscription;
   late final UserUseCase _userUseCase;
 
-  StreamController<User>? _userLocationUpdatesController;
-
-  Stream<User> get userLocationUpdates {
-    if (_userLocationUpdatesController == null ||
-        _userLocationUpdatesController!.isClosed) {
-      _userLocationUpdatesController = StreamController<User>.broadcast();
-    }
-    return _userLocationUpdatesController!.stream;
-  }
+  Stream<User> get userLocationUpdates =>
+      ref.read(trackerServiceProvider.notifier).userUpdates;
 
   @override
   TrackerState build() {
@@ -35,109 +24,91 @@ class TrackerNotifier extends Notifier<TrackerState> {
     return TrackerState();
   }
 
-  void _ensureControllerOpen() {
-    if (_userLocationUpdatesController == null ||
-        _userLocationUpdatesController!.isClosed) {
-      _userLocationUpdatesController = StreamController<User>.broadcast();
-    }
-  }
-
   Future<void> connectAndRegister(String userName) async {
-    _ensureControllerOpen();
     state = state.copyWith(isLoading: true);
-    final bool hasPermission = await _locationService.checkPermissions();
-    if (!hasPermission) {
-      state = state.copyWith(
-        error: 'Location permissions are denied.',
-      );
-      return;
-    }
 
-    _socketService = SocketService(
-      onRegistered: (int userId, String registeredUserName) async {
-        await _loadAllUsers();
-        await _startTracking(userId, registeredUserName);
-        state = state.copyWith(isLoading: false);
-      },
-      onUserLocationReceived: (Map<String, dynamic> locationData) {
-        final User userLocation = User(
-          id: locationData['userId'] as int,
-          userName: locationData['username'] as String,
-          locations: <Location>[
-            Location(
-              latitude: locationData['latitude'] as double,
-              longitude: locationData['longitude'] as double,
-              timestamp: DateTime.parse(locationData['timestamp'] as String),
-            ),
-          ],
-          isOnline: true,
-        );
-        if (userLocation.id != state.ownUser.id) {
-          final User? existingUser = state.otherUsers[userLocation.id];
-
-          state = state.copyWith(
-            otherUsers: <int, User>{
-              ...state.otherUsers,
-              userLocation.id: existingUser != null
-                  ? existingUser.copyWith(locations: userLocation.locations)
-                  : userLocation,
-            },
-          );
-
-          _userLocationUpdatesController?.add(userLocation);
-        }
-      },
-      onUserConnected: (Map<String, dynamic> userData) {
-        final int userId = userData['userId'] as int;
-
-        if (userId != state.ownUser.id) {
-          final Map<int, User> updatedUsers = <int, User>{...state.otherUsers};
-
-          if (updatedUsers.containsKey(userId)) {
-            updatedUsers[userId] = updatedUsers[userId]!.copyWith(
+    await ref
+        .read(trackerServiceProvider.notifier)
+        .start(
+          userName: userName,
+          onRegistered: (int userId, String registeredUserName) async {
+            await _loadAllUsers();
+            final User currentUser = ref
+                .read(trackerServiceProvider)
+                .currentUser;
+            state = state.copyWith(
+              ownUser: currentUser,
+              isConnected: true,
+              isTracking: true,
+              isLoading: false,
+            );
+          },
+          onUserLocationReceived: (Map<String, dynamic> locationData) {
+            final User userLocation = User(
+              id: locationData['userId'] as int,
+              userName: locationData['username'] as String,
+              locations: <Location>[
+                Location(
+                  latitude: locationData['latitude'] as double,
+                  longitude: locationData['longitude'] as double,
+                  timestamp: DateTime.parse(
+                    locationData['timestamp'] as String,
+                  ),
+                ),
+              ],
               isOnline: true,
             );
-          } else {
-            updatedUsers[userId] = User(
-              id: userId,
-              userName: userData['username'] as String,
-              isOnline: true,
-            );
-          }
 
-          state = state.copyWith(otherUsers: updatedUsers);
-
-          _userLocationUpdatesController?.add(updatedUsers[userId]!);
-        }
-      },
-      onUserDisconnected: (Map<String, dynamic> userData) {
-        final int userId = userData['userId'] as int;
-
-        if (userId != state.ownUser.id) {
-          final Map<int, User> updatedUsers = <int, User>{...state.otherUsers};
-
-          if (updatedUsers.containsKey(userId)) {
-            updatedUsers[userId] = updatedUsers[userId]!.copyWith(
-              isOnline: false,
-            );
-
-            state = state.copyWith(otherUsers: updatedUsers);
-
-            _userLocationUpdatesController?.add(updatedUsers[userId]!);
-          }
-        }
-      },
-      onError: (String error) {
-        state = state.copyWith(
-          error: error,
+            if (userLocation.id != state.ownUser.id) {
+              final User? existingUser = state.otherUsers[userLocation.id];
+              state = state.copyWith(
+                otherUsers: <int, User>{
+                  ...state.otherUsers,
+                  userLocation.id: existingUser != null
+                      ? existingUser.copyWith(locations: userLocation.locations)
+                      : userLocation,
+                },
+              );
+            }
+          },
+          onUserConnected: (Map<String, dynamic> userData) {
+            final int userId = userData['userId'] as int;
+            if (userId != state.ownUser.id) {
+              final Map<int, User> updatedUsers = <int, User>{
+                ...state.otherUsers,
+              };
+              if (updatedUsers.containsKey(userId)) {
+                updatedUsers[userId] = updatedUsers[userId]!.copyWith(
+                  isOnline: true,
+                );
+              } else {
+                updatedUsers[userId] = User(
+                  id: userId,
+                  userName: userData['username'] as String,
+                  isOnline: true,
+                );
+              }
+              state = state.copyWith(otherUsers: updatedUsers);
+            }
+          },
+          onUserDisconnected: (Map<String, dynamic> userData) {
+            final int userId = userData['userId'] as int;
+            if (userId != state.ownUser.id) {
+              final Map<int, User> updatedUsers = <int, User>{
+                ...state.otherUsers,
+              };
+              if (updatedUsers.containsKey(userId)) {
+                updatedUsers[userId] = updatedUsers[userId]!.copyWith(
+                  isOnline: false,
+                );
+                state = state.copyWith(otherUsers: updatedUsers);
+              }
+            }
+          },
+          onError: (String error) {
+            state = state.copyWith(error: error, isLoading: false);
+          },
         );
-        state = state.copyWith(isLoading: false);
-      },
-    );
-
-    _socketService?.connect();
-    await Future<void>.delayed(const Duration(seconds: 1));
-    _socketService?.register(userName);
   }
 
   Future<void> _loadAllUsers() async {
@@ -153,7 +124,7 @@ class TrackerNotifier extends Notifier<TrackerState> {
 
       for (final User user in response) {
         if (user.id != state.ownUser.id) {
-          _userLocationUpdatesController?.add(user);
+          ref.read(trackerServiceProvider.notifier).emitUserUpdate(user);
         }
       }
     } catch (e) {
@@ -163,82 +134,8 @@ class TrackerNotifier extends Notifier<TrackerState> {
     }
   }
 
-  Future<void> _startTracking(int ownUserId, String ownUserName) async {
-    final Position? currentPosition = await _locationService
-        .getCurrentLocation();
-
-    if (currentPosition == null) {
-      state = state.copyWith(
-        error: 'Could not get current location.',
-        isLoading: false,
-      );
-
-      return;
-    }
-
-    final User initialUser = state.ownUser.copyWith(
-      id: ownUserId,
-      userName: ownUserName,
-      locations: <Location>[
-        Location(
-          latitude: currentPosition.latitude,
-          longitude: currentPosition.longitude,
-          timestamp: DateTime.now(),
-        ),
-      ],
-      isOnline: true,
-    );
-
-    state = state.copyWith(
-      ownUser: initialUser,
-      isTracking: true,
-    );
-
-    _sendOwnUserLocation(
-      currentPosition.latitude,
-      currentPosition.longitude,
-    );
-
-    _locationSubscription = _locationService.getLocationStream().listen((
-      Position newPosition,
-    ) {
-      final bool hasChanged = _locationService.hasLocationChanged(newPosition);
-
-      if (hasChanged) {
-        final User updatedUser = state.ownUser.copyWith(
-          locations: <Location>[
-            Location(
-              latitude: newPosition.latitude,
-              longitude: newPosition.longitude,
-              timestamp: DateTime.now(),
-            ),
-          ],
-        );
-
-        state = state.copyWith(ownUser: updatedUser);
-
-        _sendOwnUserLocation(
-          newPosition.latitude,
-          newPosition.longitude,
-        );
-      }
-    });
-  }
-
-  void _sendOwnUserLocation(double latitude, double longitude) {
-    _userLocationUpdatesController?.add(state.ownUser);
-
-    _socketService?.sendLocation(
-      latitude,
-      longitude,
-    );
-  }
-
   Future<void> disconnect() async {
-    await _userLocationUpdatesController?.close();
-    await _locationSubscription?.cancel();
-    _socketService?.disconnect();
-    _userLocationUpdatesController = null;
+    await ref.read(trackerServiceProvider.notifier).stop();
     state = TrackerState();
   }
 

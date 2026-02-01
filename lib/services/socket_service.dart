@@ -43,12 +43,20 @@ class SocketService {
       _socket?.onConnectError(
         (dynamic data) {
           debugPrint('❌ Connection error: $data');
-          onError?.call(data.toString());
+          onError?.call('Error de conexión al servidor');
         },
       );
 
       _socket?.onConnect((_) {
         debugPrint('Socket connected');
+        if (_userId != null && _userName != null) {
+          debugPrint('🔄 Recuperando sesión: $_userName');
+          _socket?.emit('register', <String, dynamic>{'username': _userName!});
+        }
+      });
+
+      _socket?.onDisconnect((_) {
+        debugPrint('❌ Disconnected from server');
       });
 
       _socket?.on('registered', (dynamic data) {
@@ -79,10 +87,6 @@ class SocketService {
           (data as Map<String, dynamic>)['message'] as String? ??
               'Unknown error',
         );
-      });
-
-      _socket?.onDisconnect((_) {
-        debugPrint('❌ Disconnected from server');
       });
     } catch (e) {
       debugPrint('❌ Socket connection error: $e');
