@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:tracker_app_demo/services/tracker_service.dart';
 import 'package:widget_to_marker/widget_to_marker.dart';
 
 import '../../../users/domain/domain.dart';
@@ -68,7 +69,8 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
         .listen((User updatedUser) async {
           await _updateSingleMarker(updatedUser);
 
-          if (updatedUser.id == ref.read(trackerProvider).ownUser.id) {
+          if (updatedUser.id ==
+              ref.read(trackerServiceProvider).currentUser.id) {
             await _updateCamera(updatedUser);
           }
         });
@@ -91,7 +93,8 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
 
   Future<Marker> _createMarker(User user) async {
     final Location lastLocation = user.locations.first;
-    final bool isCurrentUser = ref.read(trackerProvider).ownUser.id == user.id;
+    final bool isCurrentUser =
+        ref.read(trackerServiceProvider).currentUser.id == user.id;
 
     return Marker(
       markerId: MarkerId('user_${user.id}'),
@@ -200,6 +203,9 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
             Consumer(
               builder: (BuildContext context, WidgetRef ref, Widget? child) {
                 final TrackerState trackerState = ref.watch(trackerProvider);
+                final User currentUser = ref
+                    .read(trackerServiceProvider)
+                    .currentUser;
 
                 if (!trackerState.isLoading && trackerState.error.isEmpty) {
                   return const SizedBox.shrink();
@@ -212,7 +218,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
                     await CustomAlertDialog.showCustomDialog(
                       context,
                       isConnected: trackerState.isConnected,
-                      previousUserName: trackerState.ownUser.userName,
+                      previousUserName: currentUser.userName,
                       onConfirm: (String userName) async {
                         await ref
                             .read(trackerProvider.notifier)

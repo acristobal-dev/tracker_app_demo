@@ -54,7 +54,8 @@ class TrackerService extends Notifier<TrackerServiceState> {
   /// Inicia el tracking
   Future<void> start({
     required String userName,
-    required void Function(int userId, String userName) onRegistered,
+    required Position position,
+    required void Function() onRegistered,
     required void Function(Map<String, dynamic>) onUserLocationReceived,
     required void Function(Map<String, dynamic>) onUserConnected,
     required void Function(Map<String, dynamic>) onUserDisconnected,
@@ -67,56 +68,57 @@ class TrackerService extends Notifier<TrackerServiceState> {
 
     debugPrint('🚀 Iniciando TrackerService...');
 
-    _locationService = LocationService();
-
-    // Verificar permisos
-    final bool hasPermission = await _locationService!.checkPermissions();
-    if (!hasPermission) {
-      onError('Sin permisos de ubicación');
-      return;
-    }
-
     // Configurar socket
     _socketService = SocketService(
-      onRegistered: (int userId, String registeredUserName) async {
-        debugPrint('✅ Usuario registrado: $registeredUserName ($userId)');
-
-        state = state.copyWith(
-          currentUser: User(
-            id: userId,
-            userName: registeredUserName,
-            isOnline: true,
-          ),
-          isActive: true,
-        );
-
-        // Notificar registro exitoso
-        onRegistered(userId, registeredUserName);
-
-        // Iniciar tracking de ubicación
-        await _startLocationTracking();
-      },
       onUserLocationReceived: onUserLocationReceived,
       onUserConnected: onUserConnected,
       onUserDisconnected: onUserDisconnected,
+      onRegistered:
+          ({
+            required Position position,
+            required int userId,
+            required String userName,
+          }) {
+            _updateCurrentUser(
+              position: position,
+              userId: userId,
+              userName: userName,
+            );
+
+            onRegistered();
+          },
       onError: onError,
     );
 
     // Conectar socket
-    _socketService?.connect();
-    await Future<void>.delayed(const Duration(seconds: 1));
-    _socketService?.register(userName);
+    _socketService?.connect(
+      userName: userName,
+      position: position,
+    );
   }
 
-  Future<void> _startLocationTracking() async {
-    // Obtener ubicación inicial
-    final Position? currentPosition = await _locationService
-        ?.getCurrentLocation();
-    if (currentPosition != null) {
-      _updateLocation(currentPosition);
+  Future<Position?> startLocationTracking() async {
+    debugPrint('📍 Iniciando LocationService...');
+
+    // Inicializar el servicio si no existe
+    _locationService ??= LocationService();
+
+    // Verificar permisos
+    final bool hasPermission = await _locationService!.checkPermissions();
+    if (!hasPermission) {
+      debugPrint('❌ Sin permisos de ubicación');
+      return null;
     }
 
-    // Escuchar cambios de ubicación
+    // Obtener ubicación inicial
+    final Position? currentPosition = await _locationService!
+        .getCurrentLocation();
+    if (currentPosition == null) {
+      debugPrint('❌ No se pudo obtener la ubicación inicial');
+      return null;
+    }
+
+    // Iniciar stream de actualizaciones
     _locationSubscription = _locationService!.getLocationStream().listen((
       Position position,
     ) {
@@ -125,7 +127,25 @@ class TrackerService extends Notifier<TrackerServiceState> {
       }
     });
 
-    debugPrint('📍 Location tracking iniciado');
+    debugPrint('✅ Location tracking iniciado');
+    return currentPosition;
+  }
+
+  void _updateCurrentUser({
+    required Position position,
+    required int userId,
+    required String userName,
+  }) {
+    state = state.copyWith(
+      isActive: true,
+      currentUser: User(
+        id: userId,
+        userName: userName,
+        isOnline: true,
+      ),
+    );
+
+    _updateLocation(position);
   }
 
   void _updateLocation(Position position) {

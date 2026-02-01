@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:tracker_app_demo/config/constants/environment.dart';
 
 class SocketService {
   IO.Socket? _socket;
-  String? _userName;
-  int? _userId;
+  bool _wasConnected = false;
 
   SocketService({
     this.onRegistered,
@@ -15,7 +15,12 @@ class SocketService {
     this.onError,
   });
 
-  final void Function(int userId, String userName)? onRegistered;
+  final void Function({
+    required int userId,
+    required String userName,
+    required Position position,
+  })?
+  onRegistered;
   final void Function(Map<String, dynamic> locationData)?
   onUserLocationReceived;
   final void Function(Map<String, dynamic> userData)? onUserConnected;
@@ -23,12 +28,14 @@ class SocketService {
   final void Function(String error)? onError;
 
   bool get isConnected => _socket?.connected ?? false;
-  String? get userName => _userName;
-  int? get userId => _userId;
 
-  void connect() {
+  void connect({
+    required String userName,
+    required Position position,
+  }) {
     try {
       final String serverUrl = Environment.baseApiUrl;
+
       _socket = IO.io(
         serverUrl,
         IO.OptionBuilder()
@@ -41,21 +48,22 @@ class SocketService {
             .build(),
       );
 
-      _socket?.connect();
-
       _socket?.onConnectError(
         (dynamic data) {
           debugPrint('❌ Connection error: $data');
-          onError?.call('Error de conexión al servidor');
+
+          if (!_wasConnected) {
+            onError?.call('Error de conexión al servidor');
+          } else {
+            debugPrint('🔄 Reintentando reconexión... (error silenciado)');
+          }
         },
       );
 
       _socket?.onConnect((_) {
         debugPrint('Socket connected');
-        if (_userId != null && _userName != null) {
-          debugPrint('🔄 Recuperando sesión: $_userName');
-          _socket?.emit('register', <String, dynamic>{'username': _userName!});
-        }
+        _wasConnected = true;
+        _register(userName, position);
       });
 
       _socket?.onDisconnect((_) {
@@ -63,10 +71,13 @@ class SocketService {
       });
 
       _socket?.on('registered', (dynamic data) {
-        _userId = data['userId'] as int?;
-        _userName = data['username'] as String?;
-        debugPrint('✅ Registered: $_userName (ID: $_userId)');
-        onRegistered?.call(_userId!, _userName!);
+        final int userId = data['userId'] as int;
+
+        onRegistered?.call(
+          userId: userId,
+          userName: userName,
+          position: position,
+        );
       });
 
       _socket?.on('user_location', (dynamic data) {
@@ -91,15 +102,21 @@ class SocketService {
               'Unknown error',
         );
       });
+
+      _socket?.connect();
     } catch (e) {
       debugPrint('❌ Socket connection error: $e');
       onError?.call(e.toString());
     }
   }
 
-  void register(String username) {
+  void _register(String username, Position? position) {
     if (_socket?.connected == true) {
-      _socket?.emit('register', <String, dynamic>{'username': username});
+      _socket?.emit('register', <String, dynamic>{
+        'username': username,
+        'latitude': position?.latitude,
+        'longitude': position?.longitude,
+      });
     } else {
       debugPrint('⚠️ Socket not connected');
       onError?.call('Not connected to server');
@@ -107,7 +124,7 @@ class SocketService {
   }
 
   void sendLocation(double latitude, double longitude) {
-    if (_socket?.connected == true && _userId != null) {
+    if (_socket?.connected == true) {
       _socket?.emit('location_update', <String, dynamic>{
         'latitude': latitude,
         'longitude': longitude,
@@ -120,8 +137,7 @@ class SocketService {
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
-    _userId = null;
-    _userName = null;
+    _wasConnected = false;
     debugPrint('Socket disconnected manually');
   }
 }

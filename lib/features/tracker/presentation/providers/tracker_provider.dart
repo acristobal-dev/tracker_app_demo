@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:tracker_app_demo/features/users/domain/domain.dart';
 import 'package:tracker_app_demo/features/users/domain/use_cases/user_use_case.dart';
 import 'package:tracker_app_demo/features/users/presentation/providers/users_repository_provider.dart';
@@ -26,22 +27,30 @@ class TrackerNotifier extends Notifier<TrackerState> {
 
   Future<void> connectAndRegister(String userName) async {
     state = state.copyWith(isLoading: true);
+    final Position? position = await ref
+        .read(trackerServiceProvider.notifier)
+        .startLocationTracking();
+
+    if (position == null) {
+      state = state.copyWith(
+        error: 'No se pudo obtener la ubicación',
+        isLoading: false,
+      );
+      return;
+    }
 
     await ref
         .read(trackerServiceProvider.notifier)
         .start(
           userName: userName,
-          onRegistered: (int userId, String registeredUserName) async {
-            await _loadAllUsers();
-            final User currentUser = ref
-                .read(trackerServiceProvider)
-                .currentUser;
-            state = state.copyWith(
-              ownUser: currentUser,
-              isConnected: true,
-              isTracking: true,
-              isLoading: false,
-            );
+          position: position,
+          onRegistered: () async {
+            await _loadAllUsers().then((_) {
+              state = state.copyWith(
+                isTracking: true,
+                isLoading: false,
+              );
+            });
           },
           onUserLocationReceived: (Map<String, dynamic> locationData) {
             final User userLocation = User(
@@ -59,50 +68,63 @@ class TrackerNotifier extends Notifier<TrackerState> {
               isOnline: true,
             );
 
-            if (userLocation.id != state.ownUser.id) {
-              final User? existingUser = state.otherUsers[userLocation.id];
-              state = state.copyWith(
-                otherUsers: <int, User>{
-                  ...state.otherUsers,
-                  userLocation.id: existingUser != null
-                      ? existingUser.copyWith(locations: userLocation.locations)
-                      : userLocation,
-                },
-              );
-            }
+            final User? existingUser = state.otherUsers[userLocation.id];
+            state = state.copyWith(
+              otherUsers: <int, User>{
+                ...state.otherUsers,
+                userLocation.id: existingUser != null
+                    ? existingUser.copyWith(locations: userLocation.locations)
+                    : userLocation,
+              },
+            );
+
+            ref
+                .read(trackerServiceProvider.notifier)
+                .emitUserUpdate(userLocation);
           },
           onUserConnected: (Map<String, dynamic> userData) {
             final int userId = userData['userId'] as int;
-            if (userId != state.ownUser.id) {
-              final Map<int, User> updatedUsers = <int, User>{
-                ...state.otherUsers,
-              };
-              if (updatedUsers.containsKey(userId)) {
-                updatedUsers[userId] = updatedUsers[userId]!.copyWith(
-                  isOnline: true,
-                );
-              } else {
-                updatedUsers[userId] = User(
-                  id: userId,
-                  userName: userData['username'] as String,
-                  isOnline: true,
-                );
-              }
-              state = state.copyWith(otherUsers: updatedUsers);
+
+            final Location newLocation = Location(
+              latitude: userData['latitude'] as double,
+              longitude: userData['longitude'] as double,
+              timestamp: DateTime.parse(
+                userData['timestamp'] as String,
+              ),
+            );
+
+            final Map<int, User> updatedUsers = <int, User>{
+              ...state.otherUsers,
+            };
+            if (updatedUsers.containsKey(userId)) {
+              updatedUsers[userId] = updatedUsers[userId]!.copyWith(
+                isOnline: true,
+                locations: <Location>[newLocation],
+              );
+            } else {
+              updatedUsers[userId] = User(
+                id: userId,
+                userName: userData['username'] as String,
+                isOnline: true,
+                locations: <Location>[newLocation],
+              );
             }
+            state = state.copyWith(otherUsers: updatedUsers);
           },
           onUserDisconnected: (Map<String, dynamic> userData) {
             final int userId = userData['userId'] as int;
-            if (userId != state.ownUser.id) {
-              final Map<int, User> updatedUsers = <int, User>{
-                ...state.otherUsers,
-              };
-              if (updatedUsers.containsKey(userId)) {
-                updatedUsers[userId] = updatedUsers[userId]!.copyWith(
-                  isOnline: false,
-                );
-                state = state.copyWith(otherUsers: updatedUsers);
-              }
+
+            final Map<int, User> updatedUsers = <int, User>{
+              ...state.otherUsers,
+            };
+            if (updatedUsers.containsKey(userId)) {
+              updatedUsers[userId] = updatedUsers[userId]!.copyWith(
+                isOnline: false,
+              );
+              state = state.copyWith(otherUsers: updatedUsers);
+              ref
+                  .read(trackerServiceProvider.notifier)
+                  .emitUserUpdate(updatedUsers[userId]!);
             }
           },
           onError: (String error) {
@@ -113,17 +135,18 @@ class TrackerNotifier extends Notifier<TrackerState> {
 
   Future<void> _loadAllUsers() async {
     try {
+      final User currentUser = ref.read(trackerServiceProvider).currentUser;
       final List<User> response = await _userUseCase.getUsersLocations();
       state = state.copyWith(
         otherUsers: <int, User>{
           for (final User user in response)
-            if (user.id != state.ownUser.id) user.id: user,
+            if (user.id != currentUser.id) user.id: user,
         },
         isConnected: true,
       );
 
       for (final User user in response) {
-        if (user.id != state.ownUser.id && user.locations.isNotEmpty) {
+        if (user.id != currentUser.id && user.locations.isNotEmpty) {
           ref.read(trackerServiceProvider.notifier).emitUserUpdate(user);
         }
       }
@@ -146,7 +169,6 @@ class TrackerNotifier extends Notifier<TrackerState> {
 
 class TrackerState {
   TrackerState({
-    this.ownUser = const User(id: 0, userName: ''),
     this.isConnected = false,
     this.isTracking = false,
     this.otherUsers = const <int, User>{},
@@ -156,13 +178,11 @@ class TrackerState {
 
   final bool isConnected;
   final bool isTracking;
-  final User ownUser;
   final Map<int, User> otherUsers;
   final String error;
   final bool isLoading;
 
   TrackerState copyWith({
-    User? ownUser,
     bool? isConnected,
     bool? isTracking,
     Map<int, User>? otherUsers,
@@ -170,7 +190,6 @@ class TrackerState {
     bool? isLoading,
   }) {
     return TrackerState(
-      ownUser: ownUser ?? this.ownUser,
       isConnected: isConnected ?? this.isConnected,
       isTracking: isTracking ?? this.isTracking,
       otherUsers: otherUsers ?? this.otherUsers,
