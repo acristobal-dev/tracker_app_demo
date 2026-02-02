@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:tracker_app_demo/features/users/domain/domain.dart';
+import 'package:tracker_app_demo/features/users/infrastructure/infrastructure.dart';
 
 import 'location_service.dart';
 import 'socket_service.dart';
@@ -73,20 +74,29 @@ class TrackerService extends Notifier<TrackerServiceState> {
       onUserLocationReceived: onUserLocationReceived,
       onUserConnected: onUserConnected,
       onUserDisconnected: onUserDisconnected,
-      onRegistered:
-          ({
-            required Position position,
-            required int userId,
-            required String userName,
-          }) {
-            _updateCurrentUser(
-              position: position,
-              userId: userId,
-              userName: userName,
-            );
+      onRegistered: (Map<String, dynamic> response) {
+        final int userId = response['ownUser'] as int;
+        final List<User> usersConnected =
+            (response['usersConnected'] as List<dynamic>)
+                .cast<Map<String, dynamic>>()
+                .map<User>(
+                  (Map<String, dynamic> userJson) =>
+                      UserMapper.fromMap(userJson),
+                )
+                .toList();
 
-            onRegistered();
-          },
+        _updateCurrentUser(
+          position: position,
+          userId: userId,
+          userName: userName,
+        );
+
+        for (final User user in usersConnected) {
+          emitUserUpdate(user);
+        }
+
+        onRegistered();
+      },
       onError: onError,
     );
 
@@ -144,20 +154,16 @@ class TrackerService extends Notifier<TrackerServiceState> {
         isOnline: true,
       ),
     );
-
-    _updateLocation(position);
   }
 
   void _updateLocation(Position position) {
     state = state.copyWith(
       currentUser: state.currentUser.copyWith(
-        locations: <Location>[
-          Location(
-            latitude: position.latitude,
-            longitude: position.longitude,
-            timestamp: DateTime.now(),
-          ),
-        ],
+        lastLocation: Location(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          timestamp: DateTime.now(),
+        ),
       ),
     );
 

@@ -99,7 +99,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
   }
 
   Future<Marker> _createMarker(User user) async {
-    final Location lastLocation = user.locations.first;
+    final Location lastLocation = user.lastLocation!;
     final bool isCurrentUser =
         ref.read(trackerServiceProvider).currentUser.id == user.id;
 
@@ -117,7 +117,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
   }
 
   Future<void> _updateSingleMarker(User user) async {
-    if (user.locations.isEmpty) {
+    if (user.lastLocation == null) {
       return;
     }
 
@@ -170,8 +170,8 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
   }
 
   Future<void> _updateCamera(User user) async {
-    if (_mapController != null && user.locations.isNotEmpty) {
-      final Location location = user.locations.first;
+    if (_mapController != null && user.lastLocation != null) {
+      final Location location = user.lastLocation!;
       await _mapController!.animateCamera(
         CameraUpdate.newLatLng(
           LatLng(location.latitude, location.longitude),

@@ -15,12 +15,7 @@ class SocketService {
     this.onError,
   });
 
-  final void Function({
-    required int userId,
-    required String userName,
-    required Position position,
-  })?
-  onRegistered;
+  final void Function(Map<String, dynamic> response)? onRegistered;
   final void Function(Map<String, dynamic> locationData)?
   onUserLocationReceived;
   final void Function(Map<String, dynamic> userData)? onUserConnected;
@@ -71,13 +66,7 @@ class SocketService {
       });
 
       _socket?.on('registered', (dynamic data) {
-        final int userId = data['userId'] as int;
-
-        onRegistered?.call(
-          userId: userId,
-          userName: userName,
-          position: position,
-        );
+        onRegistered?.call(data as Map<String, dynamic>);
       });
 
       _socket?.on('user_location', (dynamic data) {

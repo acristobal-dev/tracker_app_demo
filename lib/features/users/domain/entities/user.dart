@@ -5,25 +5,25 @@ class User {
     required this.id,
     required this.userName,
     this.isOnline = false,
-    this.locations = const <Location>[],
+    this.lastLocation,
   });
 
   final int id;
   final String userName;
   final bool isOnline;
-  final List<Location> locations;
+  final Location? lastLocation;
 
   User copyWith({
     int? id,
     String? userName,
     bool? isOnline,
-    List<Location>? locations,
+    Location? lastLocation,
   }) {
     return User(
       id: id ?? this.id,
       userName: userName ?? this.userName,
       isOnline: isOnline ?? this.isOnline,
-      locations: locations ?? this.locations,
+      lastLocation: lastLocation ?? this.lastLocation,
     );
   }
 }
