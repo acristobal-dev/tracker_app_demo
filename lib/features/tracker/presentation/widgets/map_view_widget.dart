@@ -58,7 +58,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _pinSvgString = await _pinSvgFuture;
       _suscribeUsersUpdates();
-      _listenToDisconnect();
+      _setupTrackerStateListener();
     });
   }
 
@@ -83,19 +83,22 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
         });
   }
 
-  void _listenToDisconnect() {
-    ref.listenManual<TrackerState>(trackerProvider, (
-      TrackerState? previous,
-      TrackerState next,
-    ) {
-      if (previous?.isConnected == true && !next.isConnected) {
-        _clearAllMarkers();
-        _cancelUserUpdatesSubscription();
-      }
-      if (previous?.isConnected == false && next.isConnected) {
-        _suscribeUsersUpdates();
-      }
-    });
+  void _setupTrackerStateListener() {
+    ref.listenManual<TrackerState>(
+      trackerProvider,
+      (
+        TrackerState? previous,
+        TrackerState next,
+      ) {
+        if (previous?.isTracking == true && !next.isTracking) {
+          _clearAllMarkers();
+          _cancelUserUpdatesSubscription();
+        }
+        if (previous?.isTracking == false && next.isTracking) {
+          _suscribeUsersUpdates();
+        }
+      },
+    );
   }
 
   Future<Marker> _createMarker(User user) async {
@@ -215,6 +218,9 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
             Consumer(
               builder: (BuildContext context, WidgetRef ref, Widget? child) {
                 final TrackerState trackerState = ref.watch(trackerProvider);
+                final TrackerServiceState trackerServiceState = ref.watch(
+                  trackerServiceProvider,
+                );
                 final User currentUser = ref
                     .read(trackerServiceProvider)
                     .currentUser;
@@ -229,7 +235,7 @@ class _MapViewWidgetState extends ConsumerState<MapViewWidget> {
                   onRetry: () async {
                     await CustomAlertDialog.showCustomDialog(
                       context,
-                      isConnected: trackerState.isConnected,
+                      isConnected: trackerServiceState.isActive,
                       previousUserName: currentUser.userName,
                       onConfirm: (String userName) async {
                         await ref

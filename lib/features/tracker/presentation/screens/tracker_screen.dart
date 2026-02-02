@@ -16,6 +16,9 @@ class TrackerScreen extends StatelessWidget {
       floatingActionButton: Consumer(
         builder: (BuildContext context, WidgetRef ref, Widget? child) {
           final TrackerState trackerState = ref.watch(trackerProvider);
+          final TrackerServiceState trackerServiceState = ref.watch(
+            trackerServiceProvider,
+          );
           final User currentUser = ref.read(trackerServiceProvider).currentUser;
 
           return FloatingActionButton(
@@ -23,10 +26,10 @@ class TrackerScreen extends StatelessWidget {
               if (!trackerState.isLoading) {
                 await CustomAlertDialog.showCustomDialog(
                   context,
-                  isConnected: trackerState.isConnected,
+                  isConnected: trackerServiceState.isActive,
                   previousUserName: currentUser.userName,
                   onConfirm: (String userName) async {
-                    trackerState.isConnected
+                    trackerServiceState.isActive
                         ? await ref.read(trackerProvider.notifier).disconnect()
                         : await ref
                               .read(trackerProvider.notifier)
@@ -38,7 +41,7 @@ class TrackerScreen extends StatelessWidget {
             child: Icon(
               trackerState.isLoading
                   ? Icons.replay_outlined
-                  : trackerState.isConnected
+                  : trackerServiceState.isActive
                   ? Icons.stop
                   : Icons.play_arrow,
             ),
